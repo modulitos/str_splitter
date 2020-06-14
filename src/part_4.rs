@@ -1,14 +1,12 @@
-// Usually, we do not need multiple lifetimes. There are only some cases where we do, and this is
-// one of them. It comes up when we need to store multiple references, and it is important that they
-// are not the same, because we want to return one without tying it to the other.
+// TODO: try adding a where D: Delimeter clause...
 
-struct StringSplitter<'delimeter, 'remaining> {
-    delimeter: &'delimeter str,
+struct StringSplitter<'remaining, D> {
+    delimeter: D,
     remaining: Option<&'remaining str>,
 }
 
-impl<'delimeter, 'haystack> StringSplitter<'delimeter, 'haystack> {
-    fn new(haystack: &'haystack str, delimeter: &'delimeter str) -> Self {
+impl<'haystack, D> StringSplitter<'haystack, D> {
+    fn new(haystack: &'haystack str, delimeter: D) -> Self {
         Self {
             delimeter,
             remaining: Some(haystack),
@@ -16,11 +14,28 @@ impl<'delimeter, 'haystack> StringSplitter<'delimeter, 'haystack> {
     }
 }
 
-// Note how were using lifetime elision, aka "anonymous lifetime", because the 'delimeter lifetime
-// lifetime is not being used. IOW, this block does not care what the 'delimeter lifetime is. Any
-// lifetime will do, as long as it's unique from all the other lifetimes.
+trait Delimeter {
+    fn find_next(&self, s: &str) -> Option<(usize, usize)>;
+}
 
-impl<'delimeter, 'remaining> Iterator for StringSplitter<'_, 'remaining> {
+impl Delimeter for &str {
+    fn find_next(&self, s: &str) -> Option<(usize, usize)> {
+        s.find(self).map(|start| (start, start + self.len()))
+    }
+}
+
+impl Delimeter for char {
+    fn find_next(&self, s: &str) -> Option<(usize, usize)> {
+        s.char_indices()
+            .find(|(_, c)| c == self)
+            .map(|(pos, _)| (pos, pos + self.len_utf8()))
+    }
+}
+
+impl<'remaining, D> Iterator for StringSplitter<'remaining, D>
+where
+    D: Delimeter,
+{
     type Item = &'remaining str;
 
     fn next(&mut self) -> Option<Self::Item> {
@@ -31,9 +46,9 @@ impl<'delimeter, 'remaining> Iterator for StringSplitter<'_, 'remaining> {
         // (which is the same thing as:)
         // let remaining = &mut self.remaining?;
 
-        if let Some(position) = remaining.find(self.delimeter) {
-            let new_match = &remaining[..position];
-            *remaining = &remaining[position + self.delimeter.len()..];
+        if let Some((delim_start, delim_end)) = self.delimeter.find_next(remaining) {
+            let new_match = &remaining[..delim_start];
+            *remaining = &remaining[delim_end..];
             Some(new_match)
         } else {
             self.remaining.take()
