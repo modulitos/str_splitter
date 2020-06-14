@@ -31,8 +31,15 @@ impl<'a> Iterator for StringSplitter<'a> {
 }
 
 #[test]
-fn simple_split() {
+fn char_split() {
     let splitter = StringSplitter::new("a b c d", " ");
     let res = splitter.into_iter().collect::<Vec<&str>>();
     assert_eq!(res, vec!["a", "b", "c", "d"]);
+}
+
+#[test]
+fn word_split() {
+    let splitter = StringSplitter::new("lazy brown fox", " ");
+    let res = splitter.into_iter().collect::<Vec<&str>>();
+    assert_eq!(res, vec!["lazy", "brown", "fox"]);
 }
