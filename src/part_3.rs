@@ -44,8 +44,9 @@ impl<'delimeter, 'remaining> Iterator for StringSplitter<'_, 'remaining> {
 // The anonymous lifetime isn't needed here, but it can be nice to give it, just to be clear that
 // it's auto-inferred.
 
-fn until_char(haystack: &str) -> &'_ str {
-    let delim = &String::from("x");
+fn until_char(haystack: &str, c: char) -> &'_ str {
+    let delim = &format!("{}", c);
+    // let delim = &String::from(c);
 
     // Defining a &str literal below would give it a static lifetime!
     // let delim = "x";
@@ -77,5 +78,5 @@ fn tail_split() {
 
 #[test]
 fn test_until_char() {
-    assert_eq!(until_char("asdfxqwer"), "asdf");
+    assert_eq!(until_char("asdfxqwer", 'x'), "asdf");
 }
